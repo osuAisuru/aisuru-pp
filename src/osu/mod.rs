@@ -266,6 +266,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
     let mut attributes = OsuDifficultyAttributes {
         ar: map_attributes.ar,
         hp: map_attributes.hp,
+        cs: map_attributes.cs,
         od,
         ..Default::default()
     };
@@ -529,6 +530,8 @@ pub struct OsuDifficultyAttributes {
     pub od: f64,
     /// The health drain rate.
     pub hp: f64,
+    /// The circle size.
+    pub cs: f64,
     /// The amount of circles.
     pub n_circles: usize,
     /// The amount of sliders.

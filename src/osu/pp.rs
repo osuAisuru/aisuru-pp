@@ -472,22 +472,34 @@ impl OsuPPInner {
         let ar_factor = if self.mods.rx() {
             if attributes.ar > 10.7 {
                 0.4 * (attributes.ar - 10.7)
-            } else if attributes.ar < 8.0 {
-                0.1 * (8.0 - attributes.ar)
             } else {
                 0.0
             }
         } else {
             if attributes.ar > 10.33 {
                 0.3 * (attributes.ar - 10.33)
-            } else if attributes.ar < 8.0 {
-                0.1 * (8.0 - attributes.ar)
             } else {
                 0.0
             }
         };
 
-        aim_value *= 1.0 + ar_factor * len_bonus; // * Buff for longer maps with high AR.
+        if ar_factor > 0.0 {
+            aim_value *= 1.0 + ar_factor * len_bonus; // * Buff for longer maps with high AR.
+        } else if attributes.ar < 8.0 {
+            let mut buff = 1.3;
+
+            if attributes.ar <= 5.0 {
+                buff += (5.0 - attributes.ar) / 50.0;
+            }
+
+            aim_value *= (buff * len_bonus).min(1.75);
+        }
+
+        // CS bonus
+        if attributes.cs > 6.0 && self.mods.rx() {            
+            let diff = attributes.cs - 6.0;
+            aim_value *= 1.03 + (diff / 20.0);  
+        }
 
         // HD bonus (this would include the Blinds mod but it's currently not representable)
         let hd_factor = match self.mods.rx() {
