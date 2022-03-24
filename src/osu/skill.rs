@@ -175,7 +175,7 @@ impl Skill {
         difficulty * difficulty_multiplier
     }
 
-    pub(crate) fn calculate_initial_strain(&self, time: f64) -> f64 {
+    pub(crate) fn calculate_initial_strain(&mut self, time: f64) -> f64 {
         let prev_time = self.prev_time.unwrap_or(0.0);
         let decayed_strain = self.curr_strain * self.kind.strain_decay(time - prev_time);
 
