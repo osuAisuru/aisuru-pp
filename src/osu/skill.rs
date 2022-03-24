@@ -87,6 +87,8 @@ pub(crate) struct Skill {
     pub(crate) strain_peaks: Vec<f64>,
 
     prev_time: Option<f64>,
+
+    pub(crate) object_strains: Vec<f64>,
 }
 
 impl Skill {
@@ -115,6 +117,7 @@ impl Skill {
             strain_peaks: Vec::with_capacity(128),
 
             prev_time: None,
+            object_strains: Vec::new(),
         }
     }
 
@@ -177,8 +180,15 @@ impl Skill {
         let decayed_strain = self.curr_strain * self.kind.strain_decay(time - prev_time);
 
         match &self.kind {
-            SkillKind::Aim { .. } | SkillKind::Flashlight { .. } => decayed_strain,
-            SkillKind::Speed { curr_rhythm, .. } => curr_rhythm * decayed_strain,
+            SkillKind::Aim { .. } | SkillKind::Flashlight { .. } => {
+                self.object_strains.push(decayed_strain);
+
+                decayed_strain
+            }
+            SkillKind::Speed { curr_rhythm, .. } => {
+                self.object_strains.push(curr_rhythm * decayed_strain);
+                curr_rhythm * decayed_strain
+            }
         }
     }
 
@@ -198,6 +208,20 @@ impl Skill {
                 self.curr_strain * *curr_rhythm
             }
         }
+    }
+
+    pub(crate) fn count_difficult_strains(&mut self) -> f64 {
+        let top_strain = self
+            .object_strains
+            .clone()
+            .into_iter()
+            .reduce(f64::max)
+            .unwrap();
+
+        self.object_strains
+            .iter()
+            .map(|&x| f64::powf(x / top_strain, 4.0))
+            .sum()
     }
 }
 

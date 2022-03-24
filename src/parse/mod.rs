@@ -782,7 +782,6 @@ pub struct Beatmap {
     /// The stack leniency that is used to calculate
     /// the stack offset for stacked positions.
     pub stack_leniency: f32,
-    
 
     /// Beatmap ID
     pub beatmap_id: i32,

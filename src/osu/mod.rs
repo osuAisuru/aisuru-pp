@@ -149,10 +149,19 @@ impl<'map> OsuStars<'map> {
             calculate_star_rating(aim_rating, speed_rating, flashlight_rating)
         };
 
+        let aim_difficult_strain_count = skills.aim().count_difficult_strains();
+        let speed_difficult_strain_count = skills
+            .speed_flashlight()
+            .0
+            .unwrap()
+            .count_difficult_strains();
+
         attributes.aim_strain = aim_rating;
         attributes.speed_strain = speed_rating;
         attributes.flashlight_rating = flashlight_rating;
         attributes.slider_factor = slider_factor;
+        attributes.aim_difficult_strain_count = aim_difficult_strain_count;
+        attributes.speed_difficult_strain_count = speed_difficult_strain_count;
         attributes.stars = star_rating;
 
         attributes
@@ -530,6 +539,11 @@ pub struct OsuDifficultyAttributes {
     pub stars: f64,
     /// The maximum combo.
     pub max_combo: usize,
+
+    /// Aim difficult strain count
+    aim_difficult_strain_count: f64,
+    /// Speed difficult strain count
+    speed_difficult_strain_count: f64,
 }
 
 impl OsuDifficultyAttributes {
