@@ -67,19 +67,13 @@ impl Skills {
     }
 
     pub(crate) fn speed_flashlight(&mut self) -> (Option<&mut Skill>, Option<&mut Skill>) {
-        match (self.mask & Self::RX, self.mask & Self::FL) {
-            // only speed
-            (0, 0) => (Some(&mut self.skills[2]), None),
-            // both speed and flashlight
-            (0, _) => {
+        match self.mask & Self::FL {
+            0 => (Some(&mut self.skills[2]), None),
+            _ => {
                 let (left, right) = self.skills.split_at_mut(3);
 
                 (Some(&mut left[2]), Some(&mut right[0]))
             }
-            // neither
-            (_, 0) => (None, None),
-            // only flashlight
-            (_, _) => (None, Some(&mut self.skills[2])),
         }
     }
 }

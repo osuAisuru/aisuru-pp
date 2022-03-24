@@ -226,6 +226,61 @@ macro_rules! parse_difficulty_body {
     }};
 }
 
+macro_rules! parse_metadata_body {
+    ($self:ident, $reader:ident, $buf:ident, $section:ident) => {{
+        let mut beatmap_id = None;
+
+        let mut empty = true;
+
+        while read_line!($reader, $buf)? != 0 {
+            let line = line_prepare!($buf);
+
+            if line.starts_with('[') && line.ends_with(']') {
+                *$section = Section::from_str(&line[1..line.len() - 1]);
+                empty = false;
+                $buf.clear();
+                break;
+            }
+
+            let (key, value) = split_colon(&line).ok_or(ParseError::BadLine)?;
+
+            match key {
+                "BeatmapID" => beatmap_id = Some(value.parse()?),
+                _ => {}
+            }
+
+            $buf.clear();
+        }
+        $self.beatmap_id = beatmap_id.unwrap_or(0);
+
+        Ok(empty)
+    }};
+}
+
+macro_rules! parse_metadata {
+    () => {
+        fn parse_metadata<R: Read>(
+            &mut self,
+            reader: &mut BufReader<R>,
+            buf: &mut String,
+            section: &mut Section,
+        ) -> ParseResult<bool> {
+            parse_metadata_body!(self, reader, buf, section)
+        }
+    };
+
+    (async $reader:ident<$inner:ident>) => {
+        async fn parse_metadata<R: $inner + Unpin>(
+            &mut self,
+            reader: &mut $reader<R>,
+            buf: &mut String,
+            section: &mut Section,
+        ) -> ParseResult<bool> {
+            parse_metadata_body!(self, reader, buf, section)
+        }
+    };
+}
+
 macro_rules! parse_difficulty {
     () => {
         fn parse_difficulty<R: Read>(
@@ -592,6 +647,7 @@ macro_rules! parse_body {
         loop {
             match section {
                 Section::General => section!(map, parse_general, reader, buf, section),
+                Section::Metadata => section!(map, parse_metadata, reader, buf, section),
                 Section::Difficulty => section!(map, parse_difficulty, reader, buf, section),
                 Section::TimingPoints => section!(map, parse_timingpoints, reader, buf, section),
                 Section::HitObjects => section!(map, parse_hitobjects, reader, buf, section),
@@ -726,6 +782,10 @@ pub struct Beatmap {
     /// The stack leniency that is used to calculate
     /// the stack offset for stacked positions.
     pub stack_leniency: f32,
+    
+
+    /// Beatmap ID
+    pub beatmap_id: i32,
 }
 
 pub(crate) const OSU_FILE_HEADER: &str = "osu file format v";
@@ -907,6 +967,7 @@ mod slider_parsing {
 impl Beatmap {
     parse!();
     parse_general!();
+    parse_metadata!();
     parse_difficulty!();
     parse_timingpoints!();
     parse_hitobjects!();
@@ -918,6 +979,7 @@ impl Beatmap {
 impl Beatmap {
     parse!(async BufReader<AsyncRead>);
     parse_general!(async BufReader<AsyncRead>);
+    parse_metadata!(async BufReader<AsyncRead>);
     parse_difficulty!(async BufReader<AsyncRead>);
     parse_timingpoints!(async BufReader<AsyncRead>);
     parse_hitobjects!(async BufReader<AsyncRead>);
@@ -929,6 +991,7 @@ impl Beatmap {
 impl Beatmap {
     parse!(async AsyncBufReader<AsyncRead>);
     parse_general!(async AsyncBufReader<AsyncRead>);
+    parse_metadata!(async AsyncBufReader<AsyncRead>);
     parse_difficulty!(async AsyncBufReader<AsyncRead>);
     parse_timingpoints!(async AsyncBufReader<AsyncRead>);
     parse_hitobjects!(async AsyncBufReader<AsyncRead>);
@@ -950,6 +1013,7 @@ fn split_colon(line: &str) -> Option<(&str, &str)> {
 enum Section {
     None,
     General,
+    Metadata,
     Difficulty,
     TimingPoints,
     HitObjects,
@@ -960,6 +1024,7 @@ impl Section {
     fn from_str(s: &str) -> Self {
         match s {
             "General" => Self::General,
+            "Metadata" => Self::Metadata,
             "Difficulty" => Self::Difficulty,
             "TimingPoints" => Self::TimingPoints,
             "HitObjects" => Self::HitObjects,
@@ -1053,5 +1118,6 @@ mod tests {
         println!("stack_leniency: {}", map.stack_leniency);
         println!("timing_points: {}", map.timing_points.len());
         println!("difficulty_points: {}", map.difficulty_points.len());
+        println!("beatmap_id: {}", map.beatmap_id);
     }
 }

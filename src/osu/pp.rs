@@ -338,7 +338,8 @@ impl<'map> OsuPP<'map> {
             calculator.calculate()
         });
 
-        self.assert_hitresults(attributes).calculate()
+        let id = self.map.beatmap_id.clone();
+        self.assert_hitresults(attributes).calculate(&id)
     }
 }
 
@@ -357,7 +358,7 @@ struct OsuPPInner {
 }
 
 impl OsuPPInner {
-    fn calculate(mut self) -> OsuPerformanceAttributes {
+    fn calculate(self, map_id: &i32) -> OsuPerformanceAttributes {
         let (aim_value, speed_value, acc_value, flashlight_value, pp) =
             if self.total_hits.abs() <= f64::EPSILON {
                 (0.0, 0.0, 0.0, 0.0, 0.0)
@@ -375,17 +376,63 @@ impl OsuPPInner {
                     multiplier *= 1.0 - (n_spinners as f64 / self.total_hits).powf(0.85);
                 }
 
-                let aim_value = self.compute_aim_value();
+                let mut aim_value = self.compute_aim_value();
                 let speed_value = self.compute_speed_value();
                 let acc_value = self.compute_accuracy_value();
                 let flashlight_value = self.compute_flashlight_value();
 
-                let pp = (aim_value.powf(1.1)
+                // RX stream penalty
+                if self.mods.rx() {
+                    let stream_factor = aim_value / speed_value;
+
+                    if stream_factor < 1.0 {
+                        let depression_factor = if self.acc >= 0.97 {
+                            0.94 - ((0.99 - self.acc.round()) * 2.0)
+                        } else {
+                            0.87
+                        };
+
+                        aim_value *= depression_factor;
+                    }
+                }
+
+                let mut pp = if self.mods.rx() {
+                    (aim_value.powf(1.17)
+                    + acc_value.powf(1.15)
+                    + flashlight_value.powf(1.1))
+                .powf(1.0 / 1.1)
+                    * multiplier
+                } else if self.mods.ap() {
+                    (acc_value.powf(1.15)
+                    + flashlight_value.powf(1.1))
+                .powf(1.0 / 1.1)
+                    * multiplier
+                } else {
+                    (aim_value.powf(1.1)
                     + speed_value.powf(1.1)
                     + acc_value.powf(1.1)
                     + flashlight_value.powf(1.1))
                 .powf(1.0 / 1.1)
-                    * multiplier;
+                    * multiplier
+                };
+
+                if self.mods.rx() {
+                    match map_id {
+                        1808605 => {
+                            // Louder than steel
+                            pp *= 0.7;
+                        },
+                        1821147 => {
+                            // Over the top
+                            pp *= 0.6;
+                        }
+                        1849420 => {
+                            // Ascension to heaven (mattay)
+                            pp *= 0.6;
+                        },
+                        _ => {}
+                    }
+                }
 
                 (aim_value, speed_value, acc_value, flashlight_value, pp)
             };
@@ -432,19 +479,34 @@ impl OsuPPInner {
         }
 
         // AR bonus
-        let ar_factor = if attributes.ar > 10.33 {
-            0.3 * (attributes.ar - 10.33)
-        } else if attributes.ar < 8.0 {
-            0.1 * (8.0 - attributes.ar)
+        let ar_factor = if self.mods.rx() {
+            if attributes.ar > 10.7 {
+                0.4 * (attributes.ar - 10.7)
+            } else if attributes.ar < 8.0 {
+                0.1 * (8.0 - attributes.ar)
+            } else {
+                0.0
+            }
         } else {
-            0.0
+            if attributes.ar > 10.33 {
+                0.3 * (attributes.ar - 10.33)
+            } else if attributes.ar < 8.0 {
+                0.1 * (8.0 - attributes.ar)
+            } else {
+                0.0
+            }
         };
 
         aim_value *= 1.0 + ar_factor * len_bonus; // * Buff for longer maps with high AR.
 
         // HD bonus (this would include the Blinds mod but it's currently not representable)
+        let hd_factor = match self.mods.rx() {
+            true => (0.05, 11.0),
+            _ => (0.04, 12.0),
+        };
+
         if self.mods.hd() {
-            aim_value *= 1.0 + 0.04 * (12.0 - attributes.ar);
+            aim_value *= 1.0 + hd_factor.0 * (hd_factor.1 - attributes.ar);
         }
 
         if attributes.n_sliders > 0 {
@@ -499,17 +561,30 @@ impl OsuPPInner {
         }
 
         // AR bonus
-        let ar_factor = if attributes.ar > 10.33 {
-            0.3 * (attributes.ar - 10.33)
+        let ar_factor = if self.mods.rx() {
+            if attributes.ar > 10.7 {
+                0.4 * (attributes.ar - 10.7)
+            } else {
+                0.0
+            }
         } else {
-            0.0
+            if attributes.ar > 10.33 {
+                0.3 * (attributes.ar - 10.33)
+            } else {
+                0.0
+            }
         };
 
         speed_value *= 1.0 + ar_factor * len_bonus; // * Buff for longer maps with high AR.
 
         // HD bonus (this would include the Blinds mod but it's currently not representable)
+        let hd_factor = match self.mods.rx() {
+            true => (0.05, 11.0),
+            _ => (0.04, 12.0),
+        };
+
         if self.mods.hd() {
-            speed_value *= 1.0 + 0.04 * (12.0 - attributes.ar);
+            speed_value *= 1.0 + hd_factor.0 * (hd_factor.1 - attributes.ar);
         }
 
         // Scaling the speed value with accuracy and OD
