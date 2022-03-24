@@ -11,18 +11,15 @@ pub(crate) struct Skills {
 }
 
 impl Skills {
-    const RX: u8 = 1 << 0;
     const FL: u8 = 1 << 1;
 
-    pub(crate) fn new(hit_window: f64, rx: bool, radius: f32, fl: bool) -> Self {
-        let mut skills = Vec::with_capacity(2 + !rx as usize + fl as usize);
+    pub(crate) fn new(hit_window: f64, radius: f32, fl: bool) -> Self {
+        let mut skills = Vec::with_capacity(3 + fl as usize);
 
         skills.push(Skill::aim(true));
         skills.push(Skill::aim(false));
 
-        if !rx {
-            skills.push(Skill::speed(hit_window));
-        }
+        skills.push(Skill::speed(hit_window));
 
         if fl {
             // NOTE: Instead of having `NORMALIZED_RADIUS` as dividend, it still uses 52.0.
@@ -30,7 +27,7 @@ impl Skills {
             skills.push(Skill::flashlight(scaling_factor));
         }
 
-        let mask = rx as u8 * Self::RX + fl as u8 * Self::FL;
+        let mask = fl as u8 * Self::FL;
         let skills = skills.into_boxed_slice();
 
         Self { skills, mask }

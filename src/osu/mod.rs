@@ -293,7 +293,7 @@ fn calculate_skills(params: OsuStars<'_>) -> (Skills, OsuDifficultyAttributes) {
         h
     });
 
-    let mut skills = Skills::new(hit_window, mods.rx(), scaling_factor.radius(), mods.fl());
+    let mut skills = Skills::new(hit_window, scaling_factor.radius(), mods.fl());
 
     let (mut prev, curr) = match (hit_objects.next(), hit_objects.next()) {
         (Some(prev), Some(curr)) => (prev, curr),

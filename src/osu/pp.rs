@@ -375,17 +375,6 @@ impl OsuPPInner {
                     multiplier *= 1.0 - (n_spinners as f64 / self.total_hits).powf(0.85);
                 }
 
-                // Relax penalty
-                if self.mods.rx() {
-                    // * As we're adding 100s and 50s to an approximated number of combo breaks\
-                    // * the result can be higher than total hits in specific scenarios
-                    // * (which breaks some calculations) so we need to clamp it.
-                    self.effective_misses = (self.effective_misses + self.n100 + self.n50)
-                        .min(self.total_hits as usize);
-
-                    multiplier *= 0.6;
-                }
-
                 let aim_value = self.compute_aim_value();
                 let speed_value = self.compute_speed_value();
                 let acc_value = self.compute_accuracy_value();
@@ -538,10 +527,6 @@ impl OsuPPInner {
     }
 
     fn compute_accuracy_value(&self) -> f64 {
-        if self.mods.rx() {
-            return 0.0;
-        }
-
         let attributes = &self.attributes;
         let total_hits = self.total_hits;
         let n_circles = attributes.n_circles as f64;
