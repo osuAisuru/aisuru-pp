@@ -387,7 +387,7 @@ impl OsuPPInner {
 
                     if stream_factor < 1.0 {
                         let depression_factor = if self.acc >= 0.97 {
-                            0.94 - ((0.99 - self.acc.round()) * 2.0)
+                            0.92 - ((0.99 - self.acc.round()) * 2.0)
                         } else {
                             0.87
                         };
@@ -401,7 +401,7 @@ impl OsuPPInner {
                         .powf(1.0 / 1.1)
                         * multiplier
                 } else if self.mods.ap() {
-                    (acc_value.powf(1.15) + flashlight_value.powf(1.1)).powf(1.0 / 1.1) * multiplier
+                    (speed_value.powf(1.12) + acc_value.powf(1.12) + flashlight_value.powf(1.05)).powf(1.0 / 1.1) * multiplier
                 } else {
                     (aim_value.powf(1.1)
                         + speed_value.powf(1.1)
@@ -589,7 +589,13 @@ impl OsuPPInner {
         speed_value *= od_factor * acc_factor;
 
         // Penalize n50s
-        speed_value *= 0.98_f64.powf(
+        let n50_factor: f64 = if self.mods.ap() {
+            0.96
+        } else {
+            0.98
+        };
+
+        speed_value *= n50_factor.powf(
             (self.n50 as f64 >= total_hits / 500.0) as u8 as f64
                 * (self.n50 as f64 - total_hits / 500.0),
         );
