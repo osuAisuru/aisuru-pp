@@ -387,9 +387,9 @@ impl OsuPPInner {
 
                     if stream_factor < 1.0 {
                         let depression_factor = if self.acc >= 0.97 {
-                            0.92 - ((0.99 - self.acc.round()) * 2.0)
+                            0.92 - ((1.0 - self.acc.ceil()) * 1.5)
                         } else {
-                            0.87
+                            0.85
                         };
 
                         aim_value *= depression_factor;
